@@ -1,0 +1,10 @@
+[project]
+name = "divine-echo"
+version = "0.1.0"
+dependencies = [
+    "requests",
+    "pillow",
+    "pyinstaller",
+    "py2app",
+    "platformdirs",
+]

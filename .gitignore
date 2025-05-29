@@ -1,0 +1,7 @@
+# Build
+build
+*.spec
+dist
+
+# OS
+.DS_Store
