@@ -1,13 +1,15 @@
 name: Build Windows Executable
 
 on:
-  workflow_dispatch: # manually trigger
+  workflow_dispatch:
   push:
-    branches: [main] # or your deployment branch
+    branches: [main]
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
+    permissions:
+      contents: write # Required for creating GitHub releases
 
     steps:
       - name: Checkout code
@@ -18,18 +20,36 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Upgrade pip and install build tools
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install .
 
-      - name: Build with PyInstaller
+      - name: Build executable with PyInstaller
         run: |
           pyinstaller --clean --noconfirm --windowed --icon=img/divine_echo.ico divine_echo.py
 
-      - name: Upload Executable
-        uses: actions/upload-artifact@v4
+      - name: Determine next version
+        id: version
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag --sort=-v:refname | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            next_tag="v0.0.1"
+          else
+            IFS='.' read -ra parts <<< "${latest_tag#v}"
+            patch=$((parts[2] + 1))
+            next_tag="v${parts[0]}.${parts[1]}.$patch"
+          fi
+          echo "Next tag: $next_tag"
+          echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: divine_echo.exe
-          path: dist/divine_echo/divine_echo.exe
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: dist/divine_echo/divine_echo.exe
